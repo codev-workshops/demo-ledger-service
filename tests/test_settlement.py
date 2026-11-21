@@ -1,9 +1,8 @@
-import random
 from datetime import date, timedelta
 
 import pytest
 
-from ledger.markets import UnknownMarketError, get_market, is_business_day
+from ledger.markets import UnknownMarketError
 from ledger.settlement import is_settled, settlement_date
 
 
@@ -30,19 +29,25 @@ def test_is_settled_on_and_after_settlement_date():
     assert is_settled(trade, "XNYS", date(2026, 3, 10))
 
 
-def _random_trading_day(market_code: str) -> date:
-    market = get_market(market_code)
-    start = date(2026, 1, 2)
-    while True:
-        day = start + timedelta(days=random.randrange(180))
-        if is_business_day(day, market):
-            return day
-
-
-def test_us_equity_settled_the_next_day():
-    # XNYS is T+1: a trade is settled by the day after it was executed.
-    trade = _random_trading_day("XNYS")
-    assert is_settled(trade, "XNYS", trade + timedelta(days=1))
+@pytest.mark.parametrize(
+    ("trade", "next_business_day"),
+    [
+        # Monday to Thursday: the next business day is the next calendar day.
+        (date(2026, 3, 2), date(2026, 3, 3)),
+        (date(2026, 3, 5), date(2026, 3, 6)),
+        # Friday: settles Monday, not Saturday.
+        (date(2026, 3, 6), date(2026, 3, 9)),
+        # Thursday 2 Apr 2026: Friday 3 Apr is Good Friday, so settles Monday.
+        (date(2026, 4, 2), date(2026, 4, 6)),
+        # Wednesday 25 Nov 2026: Thursday 26 Nov is Thanksgiving.
+        (date(2026, 11, 25), date(2026, 11, 27)),
+    ],
+)
+def test_us_equity_settled_the_next_business_day(trade, next_business_day):
+    # XNYS is T+1: a trade settles on the next business day, not the next calendar day.
+    assert settlement_date(trade, "XNYS") == next_business_day
+    assert not is_settled(trade, "XNYS", next_business_day - timedelta(days=1))
+    assert is_settled(trade, "XNYS", next_business_day)
 
 
 def test_unknown_market_raises():
