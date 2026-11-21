@@ -94,6 +94,5 @@ section disagree, this section is right.
 
 ## Versioning
 
-`ledger.__version__` and `version` in `pyproject.toml` are bumped together on
-every release, and the merge commit is tagged `vX.Y.Z` so consumers can pin
-it. Test dependencies are pinned in `requirements.txt`.
+Releases are tagged `vX.Y.Z` so consumers can pin them. The release steps are
+in [`.agents/skills/release/SKILL.md`](.agents/skills/release/SKILL.md).
